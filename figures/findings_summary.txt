@@ -1,0 +1,43 @@
+
+RESEARCH FINDINGS SUMMARY
+============================================================
+
+Research Question:
+  How early and how reliably do statistical disproportionality
+  signals (PRR/ROR) emerge in FDA FAERS data for drugs that were
+  later subject to regulatory action - and what are the primary
+  sources of noise and false signals?
+
+Dataset:
+  - 24 quarters of FDA FAERS data (2018 Q1 - 2023 Q4)
+  - 7,752,616 drug-reaction-quarter observations
+  - 5,135 unique drugs, 20,929 unique reactions
+
+Key Findings:
+
+  1. SIGNAL DETECTION WORKS
+     PRR/ROR consistently identified known safety risks.
+     Evans signals averaged 6.4% of all drug-reaction pairs.
+
+  2. SIGNALS PRECEDED REGULATORY ACTION
+     For all 5 case studies, statistical signals were detectable
+     in FAERS data BEFORE the FDA took regulatory action:
+       - Pentosan + maculopathy: signal present 28+ months before label warning
+       - Ranitidine + cancer: signal present 25+ months before withdrawal
+       - Valsartan + contamination: signal present 5+ months before recall
+       - Fluoroquinolones + aortic: signal present 10+ months before communication
+       - Metformin + NDMA: signal present 27+ months before investigation
+
+  3. PRIMARY SOURCES OF NOISE
+     a) Low case counts: 40% of Evans signals
+        have fewer than 5 cases, producing extreme but unreliable PRR values.
+     b) Stimulated reporting: FDA actions cause report surges that
+        inflate post-action PRR (ranitidine reports surged after withdrawal).
+     c) Notoriety bias: widely-prescribed drugs generate many signals
+        simply due to high prescription volume.
+
+  4. LIMITATIONS
+     - FAERS is a spontaneous reporting system; reports do not prove causation.
+     - Under-reporting is inherent; absence of signal does not mean absence of risk.
+     - Cross-quarter deduplication was not applied (within-quarter only).
+     - Drug name normalization uses prod_ai field; some ambiguity remains.
