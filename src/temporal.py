@@ -318,10 +318,23 @@ def generate_summary_table(
             first_date = quarter_to_date(first_q)
             action_date = datetime.strptime(cs["action_date"], "%Y-%m-%d")
             lead_months = (action_date - first_date).days / 30.44
+
+            # Flag left-censoring: if signal appears in earliest quarter,
+            # we cannot determine true onset — it may predate our data
+            earliest_quarter = sorted(combined["quarter"].unique())[0]
+            left_censored = (first_q == earliest_quarter)
+
             if lead_months > 0:
-                lead = f"{lead_months:.0f} months before action"
+                if left_censored:
+                    window_str = f">={lead_months:.0f} months (left-censored)"
+                else:
+                    window_str = f"{lead_months:.0f} months before action"
             else:
-                lead = f"{abs(lead_months):.0f} months after action"
+                window_str = f"{abs(lead_months):.0f} months after action"
+            lead = window_str
+
+            if left_censored:
+                first_q = f"{first_q} (earliest quarter)"
 
         # Peak PRR among relevant reactions (with a >= 3)
         peaks = drug_data[drug_data["a"] >= 3]

@@ -2,5 +2,5 @@ Drug,Action,Action Date,First Signal Quarter,Observation Window,Peak PRR,Peak Re
 Ranitidine (Zantac),FDA requests market withdrawal,2020-04,2019Q3,8 months before action,412.5,Oesophageal carcinoma
 Valsartan,FDA announces voluntary recall,2018-07,2018Q2,2 months before action,76.1,Product contamination
 Pentosan polysulfate (Elmiron),FDA adds label warning for retinal damage,2020-06,2018Q4,19 months before action,"171,239.6",Retinal pigmentation
-Fluoroquinolones,FDA safety communication on aortic risks,2018-12,2018Q1,10 months before action,373.6,Aortic rupture
-Metformin,FDA investigating NDMA in metformin,2020-05,2018Q1,27 months before action,223.6,Lactic acidosis
+Fluoroquinolones,FDA safety communication on aortic risks,2018-12,2018Q1 (earliest quarter),>=10 months (left-censored),373.6,Aortic rupture
+Metformin,FDA investigating NDMA in metformin,2020-05,2018Q1 (earliest quarter),>=27 months (left-censored),223.6,Lactic acidosis

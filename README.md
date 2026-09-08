@@ -7,14 +7,16 @@
 
 ## Key Findings
 
-1. **Disproportionality signals are retrospectively consistent with known safety events.** PRR/ROR signals for clinically relevant reactions were present in FAERS data for all 5 case-study drugs. Evans signals averaged ~6.4% of drug-reaction pairs per quarter.
+1. **Disproportionality signals are retrospectively consistent with known safety events.** PRR/ROR signals for clinically relevant reactions were present in FAERS data for the selected case-study drugs. Evans signals averaged ~6.4% of drug-reaction pairs per quarter.
 
-2. **Signals were retrospectively observable before regulatory action dates.** For case-study drugs with well-defined relevant reactions, Evans signals for those reactions were present in FAERS quarterly data in quarters preceding the regulatory action:
+2. **Signals were retrospectively observable before regulatory action dates.** For the three primary case-study drugs with well-defined relevant reactions:
    - Pentosan (Elmiron) + retinal reactions: present **19 months** before label warning
-   - Fluoroquinolones + aortic reactions: present **10 months** before safety communication
+   - Fluoroquinolones + aortic reactions: present **≥10 months** before safety communication (left-censored — signal was already present in the earliest analyzed quarter)
    - Ranitidine (Zantac) + cancer reactions: present **8 months** before market withdrawal
-   - Valsartan + contamination reactions: present **2 months** before recall
-   - Metformin: peak signal was for lactic acidosis (a known pre-existing risk, not NDMA-related) — **weakest case study**
+
+   Two additional case studies are included with caveats:
+   - Valsartan: signal present ~2 months before recall, but based on product-quality reporting terms rather than clinical adverse reactions — limited evidence for early clinical signal detection
+   - Metformin: dominant signal was lactic acidosis (a known pre-existing risk unrelated to the NDMA investigation) — included for transparency but not a meaningful example of early signal detection
 
    > These are retrospective observations. Case-study drugs were selected because
    > their regulatory actions are already known. This does not demonstrate
@@ -25,7 +27,7 @@
    - **Reporting-volume surges**: Ranitidine-related Evans signals increased ~3.3x in quarters following the FDA withdrawal request, consistent with stimulated reporting.
    - **Reporting-volume effects**: Drugs with broad adverse effect profiles (immunosuppressants, antipsychotics) generate more signals. Without prescription-volume data, we cannot separate genuine multi-reaction risk from reporting-volume artifacts.
 
-4. **Negative-control comparison**: Widely-prescribed drugs without major regulatory actions (levothyroxine, omeprazole, amlodipine) also produce persistent Evans signals in every quarter. This illustrates that Evans signals alone do not indicate a drug safety problem requiring regulatory action.
+4. **Negative-control comparison**: Widely-prescribed drugs without major regulatory actions (levothyroxine, omeprazole, amlodipine) also produce persistent Evans signals in every quarter. This demonstrates that disproportionality signals alone are not equivalent to confirmed safety problems and reinforces the need for clinical context and additional evidence. This exploratory comparison does not estimate the overall false-positive rate.
 
 ## Dataset
 
@@ -39,10 +41,10 @@
 
 - **Disproportionality analysis**: Proportional Reporting Ratio (PRR) and Reporting Odds Ratio (ROR) with 95% confidence intervals via log-normal approximation
 - **Signal classification**: Evans criteria (PRR ≥ 2, χ² ≥ 4, a ≥ 3), where a = number of case reports for the drug-reaction pair
-- **Temporal analysis**: Signal presence tracked across quarterly time windows for clinically relevant reactions
-- **Retrospective comparison**: Compared against 5 drugs with documented FDA regulatory actions
+- **Temporal analysis**: Signal presence tracked across quarterly time windows for clinically relevant reactions only
+- **Retrospective comparison**: Compared against 5 drugs with documented FDA regulatory actions (3 primary, 2 caveated)
 - **Negative controls**: 3 widely-prescribed drugs without major regulatory actions (2018–2024)
-- **Limitations analysis**: Case count stability, reporting-volume effects
+- **Limitations analysis**: Case count stability, reporting-volume effects, multiple comparisons
 
 ### Reference
 
@@ -98,10 +100,12 @@ faers-signal-detection/
 
 ## Limitations
 
-- **FAERS is a spontaneous reporting system**; a report does not prove causation and the database lacks a true exposure denominator.
-- **Under-reporting** is inherent; absence of a signal does not mean absence of risk.
+- **Spontaneous reporting**: FAERS reports do not prove causation and lack a true exposure denominator.
+- **Under-reporting**: Absence of a signal does not mean absence of risk.
+- **Multiple comparisons**: Many drug-reaction combinations are tested across many quarters using fixed thresholds without formal multiple-testing correction (e.g., Bonferroni, FDR). Some signals may occur by chance, and reporting volume can further increase the number of observed signals. Disproportionality signals should be treated as screening signals requiring further evaluation, not as confirmation of causality or safety problems.
+- **Left-censoring**: Where the first observed signal is in 2018Q1 (the earliest analyzed quarter), the true signal onset is unknown and may predate the dataset. Reported observation windows are lower bounds in these cases.
 - **Cross-quarter deduplication**: Each quarter's data was processed independently. Cases updated across quarters (same `caseid`, higher `caseversion`) may appear in multiple quarters, which could moderately affect temporal signal persistence estimates.
-- **Drug name normalization** uses the `prod_ai` (active ingredient) field, which covers 98% of records. The remaining 2% fall back to cleaned `drugname`.
+- **Drug name normalization**: Uses the `prod_ai` (active ingredient) field, covering 98% of records; the remaining 2% fall back to cleaned `drugname`.
 - **Retrospective case-study selection**: Case-study drugs were selected because their regulatory actions are already known. The analysis does not demonstrate prospective prediction.
 - **No exposure denominator**: Without prescription-volume data, high signal counts for widely-used drugs cannot be distinguished from genuine multi-reaction risk profiles.
 
@@ -111,6 +115,7 @@ faers-signal-detection/
 - MedDRA hierarchy grouping for related reactions
 - Prescription-volume normalization using external exposure data
 - Formal negative-control analysis with more drugs and false-positive-rate estimation
+- Multiple-testing correction methods (e.g., Bayesian shrinkage approaches)
 
 ## Technologies
 

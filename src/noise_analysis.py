@@ -341,12 +341,12 @@ def analyze_negative_controls(combined: pd.DataFrame, output_dir: Path):
 
         print(f"\n  Key observation: All three negative-control drugs produce")
         print(f"  persistent Evans signals across most or all quarters.")
-        print(f"  This demonstrates that Evans signals are common for")
-        print(f"  widely-reported drugs and do not by themselves indicate")
-        print(f"  a drug safety problem requiring regulatory action.")
-        print(f"  Disproportionality signals require clinical review and")
-        print(f"  additional evidence before they can be considered")
-        print(f"  actionable safety signals.")
+        print(f"  This demonstrates that disproportionality signals alone")
+        print(f"  are not equivalent to confirmed safety problems and")
+        print(f"  reinforces the need for clinical context and additional")
+        print(f"  evidence before signals can be considered actionable.")
+        print(f"  This exploratory comparison does NOT estimate the overall")
+        print(f"  false-positive rate of Evans criteria.")
 
 
 def generate_findings_summary(combined: pd.DataFrame) -> str:
@@ -409,15 +409,30 @@ Key Findings:
   4. NEGATIVE-CONTROL OBSERVATION
      Widely-prescribed drugs without major regulatory actions
      (levothyroxine, omeprazole, amlodipine) also produce persistent
-     Evans signals across most quarters. This illustrates that Evans
-     signals alone do not indicate a drug safety problem requiring
-     regulatory action.
+     Evans signals across most quarters. This demonstrates that
+     disproportionality signals alone are not equivalent to confirmed
+     safety problems and reinforces the need for clinical context
+     and additional evidence before signals can be considered
+     actionable. This exploratory comparison does NOT estimate the
+     overall false-positive rate of Evans criteria.
 
   5. LIMITATIONS
      - FAERS is a spontaneous reporting system; reports do not prove
        causation and lack a true exposure denominator.
      - Under-reporting is inherent; absence of signal does not mean
        absence of risk.
+     - Multiple comparisons: A large number of drug-reaction
+       combinations are tested across many quarters using fixed
+       thresholds without formal multiple-testing correction. Some
+       signals may therefore occur by chance, and reporting volume
+       can further increase the number of observed signals.
+       Disproportionality signals should be treated as screening
+       signals requiring further evaluation, not as confirmation of
+       causality or safety problems.
+     - Left-censoring: Where the first observed signal occurs in
+       the earliest analyzed quarter (2018Q1), the true signal onset
+       is unknown and may predate the dataset. Reported observation
+       windows are lower bounds in these cases.
      - Each quarter's data was processed independently. Cases updated
        across quarters may appear in multiple quarters' analyses,
        which could moderately affect temporal signal persistence.
