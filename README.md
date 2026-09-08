@@ -1,122 +1,197 @@
 # Drug Safety Signal Detection from FDA Adverse Event Data
 
-> **Research question**: How early and how reliably do statistical disproportionality
-> signals (PRR/ROR) appear in FDA FAERS data for drugs that were later subject to
-> regulatory action — and what are the primary sources of estimate instability
-> and potential confounding?
+> **Core Research Question**: How early and how reliably do statistical disproportionality signals (PRR/ROR) appear in FDA FAERS data for drugs that were later subject to regulatory action — and what are the primary sources of estimate instability and potential confounding?
 
-## Key Findings
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Data: FDA FAERS](https://img.shields.io/badge/Data-FDA%20FAERS%20(2018--2023)-green.svg)](https://fis.fda.gov/extensions/FPD-QDE-FAERS/FPD-QDE-FAERS.html)
+[![Dataset Scale](https://img.shields.io/badge/Scale-7.7M%2B%20observations-orange.svg)]()
 
-1. **Disproportionality signals are retrospectively consistent with known safety events.** PRR/ROR signals for clinically relevant reactions were present in FAERS data for the selected case-study drugs. Evans signals averaged ~6.4% of drug-reaction pairs per quarter.
+---
 
-2. **Signals were retrospectively observable before regulatory action dates.** For the three primary case-study drugs with well-defined relevant reactions:
-   - Pentosan (Elmiron) + retinal reactions: present **19 months** before label warning
-   - Fluoroquinolones + aortic reactions: present **≥10 months** before safety communication (left-censored — signal was already present in the earliest analyzed quarter)
-   - Ranitidine (Zantac) + cancer reactions: present **8 months** before market withdrawal
+## Executive Summary (30-Second Scan)
 
-   Two additional case studies are included with caveats:
-   - Valsartan: signal present ~2 months before recall, but based on product-quality reporting terms rather than clinical adverse reactions — limited evidence for early clinical signal detection
-   - Metformin: dominant signal was lactic acidosis (a known pre-existing risk unrelated to the NDMA investigation) — included for transparency but not a meaningful example of early signal detection
+* **Objective**: Retrospectively investigate whether statistical signal detection methods (Proportional Reporting Ratio and Reporting Odds Ratio) detect safety signals in spontaneous reporting data before official FDA regulatory actions, and quantify sources of reporting noise.
+* **Scale**: Processed **24 quarters** (2018 Q1 – 2023 Q4) of raw FDA FAERS data (~400K reports/quarter, **7.75M+ drug-reaction pairs**).
+* **Methods**: Evans criteria disproportionality ($PRR \ge 2$, $\chi^2 \ge 4$, $a \ge 3$) with 95% log-normal confidence intervals; quarterly temporal tracking; negative-control sensitivity; and reporting-volume analysis.
+* **Key Finding**: Signals were retrospectively observable prior to regulatory action dates for well-characterized safety events (e.g., 19 months prior for pentosan-induced maculopathy).
+* **Critical Limitations**: Spontaneous reporting lacks an exposure denominator; 40% of Evans signals stem from small case counts ($a=3\text{--}4$); stimulated reporting surges post-action (~3.3x for ranitidine); and negative controls also yield persistent signals, demonstrating that disproportionality indicates statistical association rather than clinical causality.
 
-   > These are retrospective observations. Case-study drugs were selected because
-   > their regulatory actions are already known. This does not demonstrate
-   > prospective predictive capability.
+---
 
-3. **Sources of estimate instability identified:**
-   - **Low case counts**: 40% of Evans signals are based on 3–4 case reports. These may reflect genuine safety concerns, but their PRR estimates have wide confidence intervals and should be interpreted cautiously.
-   - **Reporting-volume surges**: Ranitidine-related Evans signals increased ~3.3x in quarters following the FDA withdrawal request, consistent with stimulated reporting.
-   - **Reporting-volume effects**: Drugs with broad adverse effect profiles (immunosuppressants, antipsychotics) generate more signals. Without prescription-volume data, we cannot separate genuine multi-reaction risk from reporting-volume artifacts.
+## Case Study Summary & Hierarchy
 
-4. **Negative-control comparison**: Widely-prescribed drugs without major regulatory actions (levothyroxine, omeprazole, amlodipine) also produce persistent Evans signals in every quarter. This demonstrates that disproportionality signals alone are not equivalent to confirmed safety problems and reinforces the need for clinical context and additional evidence. This exploratory comparison does not estimate the overall false-positive rate.
+The 5 case studies are explicitly divided into **primary** (well-defined clinical outcomes) and **caveated** (product-quality reporting or pre-existing background risk):
 
-## Dataset
+| Category | Drug | Adverse Event / Reaction | FDA Regulatory Action | Action Date | First Observable Signal | Observable Window | Peak PRR |
+|---|---|---|---|---|---|---|---|
+| **Primary** | **Pentosan (Elmiron)** | Retinal pigmentation / Maculopathy | Label warning for retinal damage | 2020-06 | 2018Q4 | **19 months before action** | 171,239.6 |
+| **Primary** | **Fluoroquinolones** | Aortic dissection / rupture | Safety communication on aortic risks | 2018-12 | 2018Q1 *(earliest quarter)* | **$\ge$10 months (left-censored)** | 373.6 |
+| **Primary** | **Ranitidine (Zantac)** | Oesophageal / gastric carcinoma | Market withdrawal request | 2020-04 | 2019Q3 | **8 months before action** | 412.5 |
+| *Caveated* | *Valsartan* | Product contamination / quality issue | Voluntary recall (NDMA impurity) | 2018-07 | 2018Q2 | ~2 months before action | 76.1 |
+| *Caveated* | *Metformin* | Lactic acidosis (pre-existing risk) | Investigation of NDMA impurity | 2020-05 | 2018Q1 *(earliest quarter)* | $\ge$27 months (left-censored) | 223.6 |
 
-- **Source**: [FDA FAERS Quarterly Data Extracts](https://fis.fda.gov/extensions/FPD-QDE-FAERS/FPD-QDE-FAERS.html)
-- **Coverage**: 2018 Q1 through 2024 Q1 (25 quarters downloaded; 24 quarters analyzed)
-- **Scale**: ~400,000 case reports per quarter, 7.7M+ drug-reaction-quarter observations
-- **Tables used**: DEMO (demographics), DRUG (drug information), REAC (reactions)
-- **Temporal unit**: FAERS quarterly data file (not individual event date)
+*All observations are retrospective. Case-study drugs were selected because their regulatory actions are already known. This analysis does not demonstrate prospective predictive capability.*
 
-## Methodology
+---
 
-- **Disproportionality analysis**: Proportional Reporting Ratio (PRR) and Reporting Odds Ratio (ROR) with 95% confidence intervals via log-normal approximation
-- **Signal classification**: Evans criteria (PRR ≥ 2, χ² ≥ 4, a ≥ 3), where a = number of case reports for the drug-reaction pair
-- **Temporal analysis**: Signal presence tracked across quarterly time windows for clinically relevant reactions only
-- **Retrospective comparison**: Compared against 5 drugs with documented FDA regulatory actions (3 primary, 2 caveated)
-- **Negative controls**: 3 widely-prescribed drugs without major regulatory actions (2018–2024)
-- **Limitations analysis**: Case count stability, reporting-volume effects, multiple comparisons
+## Key Results & Visual Evidence
 
-### Reference
+### 1. Primary Case Study: Pentosan Polysulfate (Elmiron) & Maculopathy
+* **Context**: FDA added a warning regarding pigmentary maculopathy and irreversible retinal damage in June 2020.
+* **Finding**: Evans criteria signals for retinal pigmentation and maculopathy were detectable from **2018Q4**, providing an observable retrospective window of **19 months** prior to the label warning, with PRR exceeding $10^4$.
 
-Evans SJW, Waller PC, Davis S. "Use of proportional reporting ratios (PRRs) for signal generation from spontaneous adverse drug reaction reports." *Pharmacoepidemiology and Drug Safety*, 2001; 10:483–486.
+![Pentosan Signal Timeline](figures/timeline_pentosan_polysulfate_elmiron.png)
 
-## Setup
+---
+
+### 2. Primary Case Study: Fluoroquinolones (Levofloxacin) & Aortic Dissection
+* **Context**: FDA issued a safety communication warning of increased aortic aneurysm and dissection risks in December 2018.
+* **Finding**: Signals for aortic rupture and dissection were present in **2018Q1** (the earliest quarter in our dataset), yielding a lower-bound observable window of **$\ge$10 months**. Because the signal was present in the earliest quarter, true onset is left-censored and predates our observation window.
+
+![Fluoroquinolones Signal Timeline](figures/timeline_fluoroquinolones.png)
+
+---
+
+### 3. Primary Case Study: Ranitidine (Zantac) & Post-Action Reporting Surge
+* **Context**: FDA requested complete market withdrawal of ranitidine in April 2020 due to NDMA impurity.
+* **Finding**: Disproportionality for gastrointestinal malignancies emerged in **2019Q3** (8 months before withdrawal). Post-action data clearly illustrates **stimulated reporting**: adverse event reporting surged post-withdrawal, with total Evans signal pairs increasing **~3.3x** and distinct reported reactions increasing **1.5x**.
+
+![Ranitidine Signal Timeline](figures/timeline_ranitidine_zantac.png)
+
+---
+
+### 4. Caveated Case Studies
+* **Valsartan**: While a signal appeared in 2018Q2 (~2 months prior to the July 2018 recall), the MedDRA term driving the signal was *"Product contamination"* (a reporting term reflecting initial recall news) rather than an emerging clinical adverse reaction.
+* **Metformin**: The FDA investigated NDMA in metformin in May 2020. However, disproportionality analysis is dominated by *lactic acidosis* (PRR = 223.6), a well-characterized, boxed-warning side effect documented for decades. Metformin did not exhibit an independent NDMA-related cancer signal and is retained solely for reporting transparency.
+
+---
+
+### 5. Signal Reliability & Negative Controls
+* **Low Case Count Instability**: **39.6%** of all Evans signals rely on only $a=3$ or $a=4$ reports. While potentially legitimate early indicators, point estimates at low counts exhibit wide confidence intervals and high variance.
+* **Negative Controls**: Three widely-prescribed medications without major safety actions in 2018–2024 (**levothyroxine**, **omeprazole**, **amlodipine**) were evaluated across all 24 quarters. All three generated persistent Evans signals in **24/24 quarters** (signal rates 5.1%–7.6%). This proves that disproportionality alone does not indicate an actionable safety risk without rigorous clinical adjudication.
+
+---
+
+## Dataset & Reproducibility Architecture
+
+### Data Source & Storage Policy
+* **Source**: Official [FDA Adverse Event Reporting System (FAERS)](https://fis.fda.gov/extensions/FPD-QDE-FAERS/FPD-QDE-FAERS.html) Quarterly Data Extracts.
+* **Coverage**: 2018 Q1 through 2023 Q4 (24 analyzed quarters).
+* **Storage Policy**: Raw FAERS extracts (~1.5 GB compressed) and intermediate cached tables are **intentionally excluded from Git** via `.gitignore` to maintain repository hygiene.
+* **Automated Data Retrieval**: The entire pipeline fetches data directly from the official FDA public endpoints on demand and maintains local cache files in `data/processed/`.
+
+### Setup Instructions
 
 ```bash
-# Create virtual environment
+# 1. Clone repository
+git clone https://github.com/mohana-kamineni/faers-signal-detection.git
+cd faers-signal-detection
+
+# 2. Create and activate virtual environment
 python -m venv .venv
-
-# Activate (Windows)
+# On Windows:
 .venv\Scripts\activate
+# On Linux/macOS:
+source .venv/bin/activate
 
-# Install dependencies
+# 3. Install dependencies
 pip install -r requirements.txt
 ```
 
-## Reproduction
+### Execution Pipeline
 
 ```bash
-# Step 1: Download and process FAERS data (25 quarters, ~1.5 GB total)
+# Step 1: Download raw FAERS quarterly archives and process disproportionality
+# Downloads raw data from FDA servers, cleans, and computes quarterly PRR/ROR tables.
 python src/pipeline.py
 
-# Step 2: Run temporal analysis on case-study drugs
+# Step 2: Run retrospective temporal analysis on case-study drugs
+# Extracts quarterly trajectories and generates case-study timelines in figures/.
 python src/temporal.py
 
-# Step 3: Run signal reliability and limitations analysis
+# Step 3: Run signal reliability, stimulated reporting, and negative-control analysis
+# Generates noise and negative-control figures in figures/ and output summaries.
 python src/noise_analysis.py
 ```
 
-Results are cached: once a quarter is processed, re-running skips it.
+*Note: The pipeline employs local caching. Once a quarter is processed into `data/processed/signals_<quarter>.csv`, subsequent runs read from disk.*
 
-## Project Structure
+---
+
+## Repository Structure
 
 ```
 faers-signal-detection/
-├── data/
-│   ├── raw/              # Downloaded FAERS ZIP/extracted files (gitignored)
-│   └── processed/        # Cleaned signal detection results (gitignored)
-├── src/
-│   ├── download.py       # FAERS data acquisition from FDA servers
-│   ├── ingest.py         # Parsing $-delimited files into DataFrames
-│   ├── clean.py          # Deduplication, normalization, PS filtering
-│   ├── detection.py      # PRR/ROR computation and Evans classification
-│   ├── pipeline.py       # Multi-quarter orchestration with caching
-│   ├── temporal.py       # Retrospective case study timelines
-│   └── noise_analysis.py # Signal reliability and limitations analysis
-├── figures/              # Generated visualizations
-├── requirements.txt
-└── README.md
+├── figures/                              # Generated visual evidence & summaries
+│   ├── case_study_summary.csv            # Summary metrics across all case studies
+│   ├── findings_summary.txt              # Formal findings report
+│   ├── noise_case_count.png              # Case count distribution vs. PRR stability
+│   ├── noise_stimulated_reporting.png    # Post-action reporting volume visualization
+│   ├── noise_top_drugs.png               # Top signal-generating drugs
+│   ├── timeline_pentosan_polysulfate_elmiron.png
+│   ├── timeline_fluoroquinolones.png
+│   ├── timeline_ranitidine_zantac.png
+│   ├── timeline_valsartan.png
+│   └── timeline_metformin.png
+├── src/                                  # Modular analytical pipeline
+│   ├── __init__.py
+│   ├── download.py                       # Automated FDA quarterly extract downloader
+│   ├── ingest.py                         # Parsing $-delimited ASCII tables (DEMO, DRUG, REAC)
+│   ├── clean.py                          # Deduplication, prod_ai normalization, suspect filtering
+│   ├── detection.py                      # 2x2 contingency table, PRR, ROR, chi2, Evans criteria
+│   ├── pipeline.py                       # Multi-quarter batch orchestrator with caching
+│   ├── temporal.py                       # Longitudinal trajectory tracking & observation windows
+│   └── noise_analysis.py                 # Reliability, stimulated reporting, negative controls
+├── .gitignore                            # Excludes raw data, cache, and virtual environments
+├── LICENSE                               # MIT License
+├── README.md                             # Project overview and recruiter documentation
+└── requirements.txt                      # Minimum pinned dependency versions
 ```
 
-## Limitations
+---
 
-- **Spontaneous reporting**: FAERS reports do not prove causation and lack a true exposure denominator.
-- **Under-reporting**: Absence of a signal does not mean absence of risk.
-- **Multiple comparisons**: Many drug-reaction combinations are tested across many quarters using fixed thresholds without formal multiple-testing correction (e.g., Bonferroni, FDR). Some signals may occur by chance, and reporting volume can further increase the number of observed signals. Disproportionality signals should be treated as screening signals requiring further evaluation, not as confirmation of causality or safety problems.
-- **Left-censoring**: Where the first observed signal is in 2018Q1 (the earliest analyzed quarter), the true signal onset is unknown and may predate the dataset. Reported observation windows are lower bounds in these cases.
-- **Cross-quarter deduplication**: Each quarter's data was processed independently. Cases updated across quarters (same `caseid`, higher `caseversion`) may appear in multiple quarters, which could moderately affect temporal signal persistence estimates.
-- **Drug name normalization**: Uses the `prod_ai` (active ingredient) field, covering 98% of records; the remaining 2% fall back to cleaned `drugname`.
-- **Retrospective case-study selection**: Case-study drugs were selected because their regulatory actions are already known. The analysis does not demonstrate prospective prediction.
-- **No exposure denominator**: Without prescription-volume data, high signal counts for widely-used drugs cannot be distinguished from genuine multi-reaction risk profiles.
+## Statistical Methodology
 
-## Future Work
+Disproportionality analysis is conducted on $2 \times 2$ contingency tables for each drug-reaction pair in each quarterly snapshot:
 
-- Cross-quarter deduplication using a cumulative caseid registry
-- MedDRA hierarchy grouping for related reactions
-- Prescription-volume normalization using external exposure data
-- Formal negative-control analysis with more drugs and false-positive-rate estimation
-- Multiple-testing correction methods (e.g., Bayesian shrinkage approaches)
+| | Target Reaction ($R$) | All Other Reactions ($\neg R$) | Total |
+|---|---|---|---|
+| **Target Drug ($D$)** | $a$ | $b$ | $a+b$ |
+| **All Other Drugs ($\neg D$)** | $c$ | $d$ | $c+d$ |
+| **Total** | $a+c$ | $b+d$ | $N$ |
 
-## Technologies
+* **Proportional Reporting Ratio (PRR)**:
+  $$\text{PRR} = \frac{a / (a+b)}{c / (c+d)}$$
+  Standard Error: $\text{SE}(\ln \text{PRR}) = \sqrt{\frac{1}{a} - \frac{1}{a+b} + \frac{1}{c} - \frac{1}{c+d}}$
+* **Reporting Odds Ratio (ROR)**:
+  $$\text{ROR} = \frac{a \cdot d}{b \cdot c}$$
+  Standard Error: $\text{SE}(\ln \text{ROR}) = \sqrt{\frac{1}{a} + \frac{1}{b} + \frac{1}{c} + \frac{1}{d}}$
+* **Yates-Corrected Chi-Squared ($\chi^2$)**:
+  $$\chi^2 = \frac{N \left( |a \cdot d - b \cdot c| - \frac{N}{2} \right)^2}{(a+b)(c+d)(a+c)(b+d)}$$
+* **Evans Criteria for Signal Detection**:
+  $$\text{PRR} \ge 2.0 \quad \land \quad \chi^2 \ge 4.0 \quad \land \quad a \ge 3$$
 
-Python · pandas · NumPy · SciPy · matplotlib · seaborn · requests
+---
+
+## Methodological Limitations
+
+1. **Spontaneous Reporting Constraints**: FAERS reports are submitted voluntarily by clinicians, consumers, and manufacturers. Reports lack medical verification and cannot prove causality.
+2. **Absence of Exposure Denominator**: FAERS records adverse events, not prescription rates or patient-years. Disproportionality measures relative reporting frequency, not absolute incidence.
+3. **Multiple Comparisons**: Tens of thousands of drug-reaction pairs are evaluated each quarter without family-wise error rate or false discovery rate corrections. Disproportionality operates as a high-sensitivity screening filter, not a definitive statistical test.
+4. **Left-Censoring**: For signals present in the initial observation quarter (2018Q1), the true onset of disproportionality is unknown and predates the dataset.
+5. **Cross-Quarter Deduplication**: Deduplication is performed within each quarterly file (retaining the latest `caseversion` per `caseid`). Updated case records spanning multiple quarters may appear across successive quarters.
+6. **Drug Normalization Imperfections**: While active ingredient mapping (`prod_ai`) standardizes 98.2% of suspect records, 1.8% fall back to cleaned verbatim trade names.
+
+---
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+## Technologies Used
+
+* **Python 3.10+**
+* **Data Processing**: `pandas`, `numpy`, `scipy`
+* **Visualization**: `matplotlib`, `seaborn`
+* **Networking**: `requests`
