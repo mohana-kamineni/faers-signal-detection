@@ -9,7 +9,7 @@
 
 ---
 
-## Executive Summary (30-Second Scan)
+## Executive Summary
 
 * **Objective**: Retrospectively investigate whether statistical signal detection methods (Proportional Reporting Ratio and Reporting Odds Ratio) detect safety signals in spontaneous reporting data before official FDA regulatory actions, and quantify sources of reporting noise.
 * **Scale**: Processed **24 quarters** (2018 Q1 – 2023 Q4) of raw FDA FAERS data (~400K reports/quarter, **7.75M+ drug-reaction pairs**).
