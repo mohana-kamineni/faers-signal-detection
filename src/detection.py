@@ -7,9 +7,8 @@ Computes disproportionality measures for drug-reaction pairs:
   - Chi-squared statistic
   - 95% confidence intervals
 
-These are the standard methods used by pharmacovigilance agencies
-(FDA, EMA, WHO-UMC) to detect safety signals in spontaneous
-reporting databases.
+These are methods described in the pharmacovigilance literature
+for signal detection in spontaneous reporting databases.
 
 Reference:
   Evans SJW, Waller PC, Davis S. "Use of proportional reporting ratios

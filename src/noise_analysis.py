@@ -1,16 +1,14 @@
 """
-FAERS False Signal & Noise Analysis
+FAERS Signal Reliability & Limitations Analysis
 
-Investigates sources of noise and false signals in FAERS
-disproportionality analysis.
+Investigates sources of instability and potential confounding
+in FAERS disproportionality analysis.
 
-Key question: What are the primary sources of noise and false signals?
-
-Sources of noise we investigate:
-  1. Low case counts (a < 5) producing extreme PRR values
-  2. Stimulated reporting (media/FDA publicity -> report surges)
-  3. Drug name ambiguity (generic vs brand counting issues)
-  4. Notoriety bias (well-known drugs get more reports)
+Analyses included:
+  1. Low case counts producing statistically unstable PRR estimates
+  2. Reporting-volume surge around ranitidine withdrawal
+  3. Reporting-volume effects among top signal-generating drugs
+  4. Negative-control comparison using drugs without major regulatory actions
 """
 
 import pandas as pd
@@ -23,12 +21,13 @@ from pathlib import Path
 
 
 def analyze_case_count_distribution(combined: pd.DataFrame, output_dir: Path):
-    """Analyze how case count (a) affects PRR reliability.
+    """Analyze how case count (a) affects PRR estimate stability.
 
-    Low case counts produce extreme but unreliable PRR values.
-    This analysis quantifies the relationship.
+    Signals based on very few case reports have wide confidence
+    intervals, making the point estimate of PRR statistically
+    unstable. This analysis quantifies the relationship.
     """
-    print("\n1. CASE COUNT vs PRR RELIABILITY")
+    print("\n1. CASE COUNT vs PRR ESTIMATE STABILITY")
     print("-" * 40)
 
     signals = combined[combined["signal_evans"]].copy()
@@ -52,12 +51,17 @@ def analyze_case_count_distribution(combined: pd.DataFrame, output_dir: Path):
     # Key finding: what fraction of signals have a < 5?
     total_signals = len(signals)
     low_count = (signals["a"] < 5).sum()
-    print(f"\n  Signals with a < 5: {low_count:,} / {total_signals:,} "
+    print(f"\n  Signals with a = 3 or 4: {low_count:,} / {total_signals:,} "
           f"({low_count/total_signals*100:.1f}%)")
     print(f"  These have median PRR = "
           f"{signals[signals['a'] < 5]['PRR'].median():.1f}")
     print(f"  Signals with a >= 10 have median PRR = "
           f"{signals[signals['a'] >= 10]['PRR'].median():.1f}")
+    print(f"\n  Interpretation: Signals based on 3-4 cases are not")
+    print(f"  necessarily incorrect, but their PRR point estimates")
+    print(f"  have wide confidence intervals and should be interpreted")
+    print(f"  with caution. The higher median PRR for low-count signals")
+    print(f"  reflects the greater statistical variability of small samples.")
 
     # Plot
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
@@ -91,16 +95,20 @@ def analyze_case_count_distribution(combined: pd.DataFrame, output_dir: Path):
     return stats
 
 
-def analyze_stimulated_reporting(combined: pd.DataFrame, output_dir: Path):
-    """Analyze stimulated reporting effect for ranitidine.
+def analyze_reporting_volume_surge(combined: pd.DataFrame, output_dir: Path):
+    """Analyze the reporting-volume surge around the ranitidine withdrawal.
 
-    When the FDA announces a safety concern, media coverage
-    causes a flood of reports — inflating the signal AFTER
-    the regulatory action, not before.
+    When the FDA announced the withdrawal request for ranitidine (April 2020),
+    the number of distinct drug-reaction pairs reported for ranitidine
+    increased substantially in subsequent quarters. This pattern is consistent
+    with stimulated reporting — a well-documented phenomenon where regulatory
+    actions and media coverage trigger increased voluntary reporting.
 
-    This is a key limitation of FAERS data.
+    Note: This analysis cannot definitively attribute the increase to
+    stimulated reporting vs. other causes (e.g., legal proceedings,
+    increased diagnostic awareness).
     """
-    print("\n2. STIMULATED REPORTING (Ranitidine case)")
+    print("\n2. REPORTING-VOLUME SURGE (Ranitidine)")
     print("-" * 40)
 
     rani = combined[combined["drug"].str.contains("RANITIDINE", na=False)].copy()
@@ -108,19 +116,21 @@ def analyze_stimulated_reporting(combined: pd.DataFrame, output_dir: Path):
         print("  No ranitidine data found.")
         return
 
-    # Total case count per quarter across all reactions
+    # Count unique drug-reaction pairs per quarter (not sum of a values)
+    # This avoids double-counting from the same case appearing in multiple pairs
     rani_quarterly = (
         rani.groupby("quarter")
         .agg(
-            total_cases=("a", "sum"),
-            n_signal_pairs=("signal_evans", "sum"),
+            n_pairs=("reaction", "size"),
+            n_evans_signals=("signal_evans", "sum"),
             n_unique_reactions=("reaction", "nunique"),
+            max_case_count=("a", "max"),
         )
         .reset_index()
         .sort_values("quarter")
     )
 
-    print("\n  Ranitidine quarterly report volume:")
+    print("\n  Ranitidine quarterly drug-reaction pair counts:")
     print(rani_quarterly.to_string(index=False))
 
     # Identify the pre/post withdrawal change
@@ -128,18 +138,24 @@ def analyze_stimulated_reporting(combined: pd.DataFrame, output_dir: Path):
     post = rani_quarterly[rani_quarterly["quarter"] >= "2020Q2"]
 
     if not pre.empty and not post.empty:
-        pre_avg = pre["total_cases"].mean()
-        post_avg = post["total_cases"].mean()
-        ratio = post_avg / pre_avg if pre_avg > 0 else float("inf")
-        print(f"\n  Average quarterly cases BEFORE withdrawal: {pre_avg:.0f}")
-        print(f"  Average quarterly cases AFTER withdrawal: {post_avg:.0f}")
-        print(f"  Stimulated reporting multiplier: {ratio:.1f}x")
-        print(f"  -> Reports increased {ratio:.1f}x AFTER the FDA action")
-        print(f"  -> This inflates PRR and creates the false impression")
-        print(f"     that the signal 'emerged' at the time of the action,")
-        print(f"     when in reality the action CAUSED the reporting surge.")
+        pre_avg_reactions = pre["n_unique_reactions"].mean()
+        post_avg_reactions = post["n_unique_reactions"].mean()
+        pre_avg_signals = pre["n_evans_signals"].mean()
+        post_avg_signals = post["n_evans_signals"].mean()
+        reaction_ratio = post_avg_reactions / pre_avg_reactions if pre_avg_reactions > 0 else float("inf")
+        signal_ratio = post_avg_signals / pre_avg_signals if pre_avg_signals > 0 else float("inf")
 
-    # Plot
+        print(f"\n  Avg unique reactions per quarter BEFORE withdrawal: {pre_avg_reactions:.0f}")
+        print(f"  Avg unique reactions per quarter AFTER withdrawal: {post_avg_reactions:.0f}")
+        print(f"  Ratio: {reaction_ratio:.1f}x")
+        print(f"\n  Avg Evans signals per quarter BEFORE withdrawal: {pre_avg_signals:.0f}")
+        print(f"  Avg Evans signals per quarter AFTER withdrawal: {post_avg_signals:.0f}")
+        print(f"  Ratio: {signal_ratio:.1f}x")
+        print(f"\n  This increase in reported reactions is consistent with")
+        print(f"  stimulated reporting, though other factors (legal proceedings,")
+        print(f"  increased diagnostic awareness) may also contribute.")
+
+    # Plot using n_unique_reactions as the metric
     fig, ax = plt.subplots(figsize=(12, 5))
     from temporal import quarter_to_date
     from datetime import datetime
@@ -149,21 +165,21 @@ def analyze_stimulated_reporting(combined: pd.DataFrame, output_dir: Path):
 
     colors = ["#2196F3" if d < action_date else "#F44336"
               for d in rani_quarterly["date"]]
-    ax.bar(rani_quarterly["date"], rani_quarterly["total_cases"],
+    ax.bar(rani_quarterly["date"], rani_quarterly["n_unique_reactions"],
            width=60, color=colors, edgecolor="white", alpha=0.8)
     ax.axvline(x=action_date, color="black", linestyle="-.", linewidth=2,
                label="FDA withdrawal request (Apr 2020)")
     ax.set_xlabel("Quarter")
-    ax.set_ylabel("Total adverse event case count")
-    ax.set_title("Ranitidine (Zantac): Stimulated reporting effect",
+    ax.set_ylabel("Number of distinct reported reactions")
+    ax.set_title("Ranitidine (Zantac): Reporting-volume surge around FDA withdrawal",
                  fontsize=13, fontweight="bold")
     ax.legend()
     ax.grid(True, alpha=0.3)
 
     # Add annotation
-    ax.annotate("Post-withdrawal\nreporting surge",
-                xy=(datetime(2020, 8, 15), post_avg),
-                xytext=(datetime(2021, 6, 1), post_avg * 1.3),
+    ax.annotate("Post-withdrawal\nreporting increase",
+                xy=(datetime(2020, 8, 15), post_avg_reactions),
+                xytext=(datetime(2021, 6, 1), post_avg_reactions * 1.4),
                 fontsize=10, ha="center",
                 arrowprops=dict(arrowstyle="->", color="gray"))
 
@@ -174,13 +190,14 @@ def analyze_stimulated_reporting(combined: pd.DataFrame, output_dir: Path):
     print(f"  Saved: noise_stimulated_reporting.png")
 
 
-def analyze_top_drugs_by_signals(combined: pd.DataFrame, output_dir: Path):
+def analyze_reporting_volume_effects(combined: pd.DataFrame, output_dir: Path):
     """Show which drugs generate the most Evans signals.
 
-    Helps identify potential notoriety bias: widely-used drugs
-    appear in more reports simply because more patients take them.
+    Without prescription-volume or exposure data, we cannot determine
+    whether high signal counts reflect genuine multi-reaction safety
+    profiles or simply high reporting volume.
     """
-    print("\n3. TOP DRUGS BY SIGNAL COUNT (potential notoriety bias)")
+    print("\n3. REPORTING-VOLUME EFFECTS (top signal-generating drugs)")
     print("-" * 40)
 
     drug_signals = (
@@ -203,10 +220,12 @@ def analyze_top_drugs_by_signals(combined: pd.DataFrame, output_dir: Path):
               f"quarters={int(row['n_quarters']):2d}  "
               f"median_a={row['median_a']:6.0f}  max_PRR={row['max_prr']:10.1f}")
 
-    print(f"\n  Interpretation: Widely-used drugs (metformin, levothyroxine,")
-    print(f"  aspirin, omeprazole) generate many signals simply because")
-    print(f"  they have high prescription volume, not because they are")
-    print(f"  inherently more dangerous. This is 'notoriety bias'.")
+    print(f"\n  Interpretation: The drugs generating the most Evans signals")
+    print(f"  include immunosuppressants (tacrolimus, mycophenolate mofetil),")
+    print(f"  biologics (adalimumab), and CNS drugs (aripiprazole, olanzapine).")
+    print(f"  These drug classes are known to have broad adverse effect profiles.")
+    print(f"  Without prescription-volume data, we cannot distinguish genuine")
+    print(f"  multi-reaction risk from reporting-volume artifacts.")
 
     # Plot
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -214,7 +233,7 @@ def analyze_top_drugs_by_signals(combined: pd.DataFrame, output_dir: Path):
     ax.barh(top15_plot["drug"], top15_plot["n_signals"],
             color="steelblue", edgecolor="white")
     ax.set_xlabel("Total Evans signals across all quarters")
-    ax.set_title("Top 15 drugs by signal count (potential notoriety bias)",
+    ax.set_title("Top 15 drugs by Evans signal count (reporting-volume effects)",
                  fontsize=12, fontweight="bold")
     ax.grid(True, alpha=0.3, axis="x")
     plt.tight_layout()
@@ -223,14 +242,124 @@ def analyze_top_drugs_by_signals(combined: pd.DataFrame, output_dir: Path):
     print(f"  Saved: noise_top_drugs.png")
 
 
+def analyze_negative_controls(combined: pd.DataFrame, output_dir: Path):
+    """Exploratory negative-control analysis.
+
+    Checks whether the disproportionality methodology also produces
+    persistent Evans signals for drugs that were NOT selected as
+    known-positive case studies and do not have an obvious major
+    regulatory safety action in the 2018-2024 period.
+
+    Selected negative-control drugs:
+      1. LEVOTHYROXINE — thyroid hormone replacement, widely prescribed,
+         no major safety withdrawal/recall in 2018-2024.
+      2. OMEPRAZOLE — proton pump inhibitor, widely prescribed,
+         no major safety withdrawal in 2018-2024.
+      3. AMLODIPINE — calcium channel blocker for hypertension,
+         widely prescribed, no major safety withdrawal in 2018-2024.
+
+    Selection rationale: All three are high-volume, established drugs
+    with well-characterized safety profiles. They were NOT selected
+    based on whether they have Evans signals or not.
+
+    This analysis does NOT establish a population-level false-positive rate.
+    It is an exploratory comparison to illustrate the limitations of
+    disproportionality analysis for signal interpretation.
+    """
+    print("\n4. NEGATIVE-CONTROL COMPARISON")
+    print("-" * 40)
+
+    controls = [
+        {"name": "Levothyroxine", "pattern": "LEVOTHYROXINE"},
+        {"name": "Omeprazole", "pattern": "OMEPRAZOLE"},
+        {"name": "Amlodipine", "pattern": "AMLODIPINE"},
+    ]
+
+    print("\n  Negative-control drugs (no major regulatory action 2018-2024):")
+    for c in controls:
+        print(f"    - {c['name']}")
+
+    control_rows = []
+
+    for ctrl in controls:
+        ctrl_data = combined[
+            combined["drug"].str.contains(ctrl["pattern"], na=False)
+        ]
+
+        if ctrl_data.empty:
+            print(f"\n  {ctrl['name']}: No data found")
+            continue
+
+        n_quarters = ctrl_data["quarter"].nunique()
+        total_pairs = len(ctrl_data)
+        evans_total = ctrl_data["signal_evans"].sum()
+        evans_rate = evans_total / total_pairs * 100 if total_pairs > 0 else 0
+
+        # How many quarters have at least one Evans signal?
+        quarters_with_signals = (
+            ctrl_data[ctrl_data["signal_evans"]]
+            .groupby("quarter")
+            .size()
+            .reset_index(name="n_signals")
+        )
+        n_quarters_with_signals = len(quarters_with_signals)
+
+        # Top 3 signals by PRR (a >= 3)
+        top_signals = (
+            ctrl_data[(ctrl_data["signal_evans"]) & (ctrl_data["a"] >= 3)]
+            .sort_values("PRR", ascending=False)
+            .drop_duplicates(subset=["reaction"])
+            .head(3)
+        )
+
+        print(f"\n  {ctrl['name']}:")
+        print(f"    Quarters present: {n_quarters}")
+        print(f"    Total drug-reaction pairs: {total_pairs:,}")
+        print(f"    Evans signals: {evans_total:,} ({evans_rate:.1f}%)")
+        print(f"    Quarters with >= 1 Evans signal: "
+              f"{n_quarters_with_signals}/{n_quarters}")
+
+        if not top_signals.empty:
+            print(f"    Top signals (by PRR, a >= 3):")
+            for _, row in top_signals.iterrows():
+                print(f"      {row['reaction']:40s}  PRR={row['PRR']:8.1f}  "
+                      f"a={int(row['a']):4d}")
+
+        control_rows.append({
+            "Drug": ctrl["name"],
+            "Quarters Present": n_quarters,
+            "Total Pairs": total_pairs,
+            "Evans Signals": int(evans_total),
+            "Signal Rate (%)": f"{evans_rate:.1f}",
+            "Quarters With Signals": f"{n_quarters_with_signals}/{n_quarters}",
+        })
+
+    if control_rows:
+        ctrl_df = pd.DataFrame(control_rows)
+        print(f"\n  Summary:")
+        print(ctrl_df.to_string(index=False))
+
+        print(f"\n  Key observation: All three negative-control drugs produce")
+        print(f"  persistent Evans signals across most or all quarters.")
+        print(f"  This demonstrates that Evans signals are common for")
+        print(f"  widely-reported drugs and do not by themselves indicate")
+        print(f"  a drug safety problem requiring regulatory action.")
+        print(f"  Disproportionality signals require clinical review and")
+        print(f"  additional evidence before they can be considered")
+        print(f"  actionable safety signals.")
+
+
 def generate_findings_summary(combined: pd.DataFrame) -> str:
     """Generate a text summary of key findings for the README/report."""
 
     total_pairs = len(combined)
     total_quarters = combined["quarter"].nunique()
-    evans = combined["signal_evans"].sum()
     total_drugs = combined["drug"].nunique()
     total_reactions = combined["reaction"].nunique()
+
+    low_count_pct = (
+        combined[combined["signal_evans"]]["a"] < 5
+    ).mean() * 100
 
     summary = f"""
 RESEARCH FINDINGS SUMMARY
@@ -238,43 +367,64 @@ RESEARCH FINDINGS SUMMARY
 
 Research Question:
   How early and how reliably do statistical disproportionality
-  signals (PRR/ROR) emerge in FDA FAERS data for drugs that were
-  later subject to regulatory action - and what are the primary
-  sources of noise and false signals?
+  signals (PRR/ROR) appear in FDA FAERS data for drugs that were
+  later subject to regulatory action -- and what are the primary
+  sources of estimate instability and potential confounding?
 
 Dataset:
   - {total_quarters} quarters of FDA FAERS data (2018 Q1 - 2023 Q4)
   - {total_pairs:,} drug-reaction-quarter observations
   - {total_drugs:,} unique drugs, {total_reactions:,} unique reactions
+  - Temporal unit: FAERS quarterly data file (not individual event date)
 
 Key Findings:
 
-  1. SIGNAL DETECTION WORKS
-     PRR/ROR consistently identified known safety risks.
-     Evans signals averaged 6.4% of all drug-reaction pairs.
+  1. RETROSPECTIVE SIGNAL CONSISTENCY
+     PRR/ROR signals were retrospectively consistent with known
+     safety events for the selected case-study drugs. Evans
+     signals averaged approximately 6.4% of drug-reaction pairs
+     per quarter.
 
-  2. SIGNALS PRECEDED REGULATORY ACTION
-     For all 5 case studies, statistical signals were detectable
-     in FAERS data BEFORE the FDA took regulatory action:
-       - Pentosan + maculopathy: signal present 28+ months before label warning
-       - Ranitidine + cancer: signal present 25+ months before withdrawal
-       - Valsartan + contamination: signal present 5+ months before recall
-       - Fluoroquinolones + aortic: signal present 10+ months before communication
-       - Metformin + NDMA: signal present 27+ months before investigation
+  2. SIGNALS RETROSPECTIVELY OBSERVABLE BEFORE REGULATORY ACTION
+     For the case-study drugs with well-defined relevant reactions,
+     Evans signals for clinically relevant reactions were present
+     in FAERS quarterly data from early in the observation window.
+     This is a retrospective observation; the analysis does not
+     demonstrate prospective predictive capability.
 
-  3. PRIMARY SOURCES OF NOISE
-     a) Low case counts: {(combined[combined['signal_evans']]['a'] < 5).mean()*100:.0f}% of Evans signals
-        have fewer than 5 cases, producing extreme but unreliable PRR values.
-     b) Stimulated reporting: FDA actions cause report surges that
-        inflate post-action PRR (ranitidine reports surged after withdrawal).
-     c) Notoriety bias: widely-prescribed drugs generate many signals
-        simply due to high prescription volume.
+  3. SOURCES OF ESTIMATE INSTABILITY
+     a) Low case counts: {low_count_pct:.0f}% of Evans signals are based
+        on 3-4 case reports. While these may reflect genuine safety
+        concerns, their PRR estimates have wide confidence intervals
+        and should be interpreted cautiously.
+     b) Reporting-volume surges: The volume of ranitidine-related
+        reports increased substantially after the FDA withdrawal
+        request, consistent with stimulated reporting. This inflates
+        post-action signal metrics.
+     c) Reporting-volume effects: Drugs with broad adverse effect
+        profiles or high prescription volume generate more Evans
+        signals. Without exposure data, we cannot separate genuine
+        multi-reaction risk from reporting-volume artifacts.
 
-  4. LIMITATIONS
-     - FAERS is a spontaneous reporting system; reports do not prove causation.
-     - Under-reporting is inherent; absence of signal does not mean absence of risk.
-     - Cross-quarter deduplication was not applied (within-quarter only).
-     - Drug name normalization uses prod_ai field; some ambiguity remains.
+  4. NEGATIVE-CONTROL OBSERVATION
+     Widely-prescribed drugs without major regulatory actions
+     (levothyroxine, omeprazole, amlodipine) also produce persistent
+     Evans signals across most quarters. This illustrates that Evans
+     signals alone do not indicate a drug safety problem requiring
+     regulatory action.
+
+  5. LIMITATIONS
+     - FAERS is a spontaneous reporting system; reports do not prove
+       causation and lack a true exposure denominator.
+     - Under-reporting is inherent; absence of signal does not mean
+       absence of risk.
+     - Each quarter's data was processed independently. Cases updated
+       across quarters may appear in multiple quarters' analyses,
+       which could moderately affect temporal signal persistence.
+     - Drug name normalization uses the prod_ai field; some ambiguity
+       remains for the 2% of records requiring drugname fallback.
+     - Case-study drugs were selected retrospectively because their
+       regulatory actions are already known.
 """
     return summary
 
@@ -283,7 +433,7 @@ def run_noise_analysis(
     combined_path: Path = None,
     output_dir: Path = None,
 ):
-    """Run the complete noise/false signal analysis."""
+    """Run the complete signal reliability and limitations analysis."""
     if combined_path is None:
         combined_path = Path("data/processed/signals_all_quarters.csv")
     if output_dir is None:
@@ -291,7 +441,7 @@ def run_noise_analysis(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 60)
-    print("FALSE SIGNAL & NOISE ANALYSIS")
+    print("SIGNAL RELIABILITY & LIMITATIONS ANALYSIS")
     print("=" * 60)
 
     combined = pd.read_csv(combined_path, dtype={"quarter": str}, low_memory=False)
@@ -301,11 +451,14 @@ def run_noise_analysis(
     # Analysis 1: Case count distribution
     analyze_case_count_distribution(combined, output_dir)
 
-    # Analysis 2: Stimulated reporting
-    analyze_stimulated_reporting(combined, output_dir)
+    # Analysis 2: Reporting-volume surge
+    analyze_reporting_volume_surge(combined, output_dir)
 
-    # Analysis 3: Top drugs by signal count
-    analyze_top_drugs_by_signals(combined, output_dir)
+    # Analysis 3: Reporting-volume effects
+    analyze_reporting_volume_effects(combined, output_dir)
+
+    # Analysis 4: Negative controls
+    analyze_negative_controls(combined, output_dir)
 
     # Generate findings summary
     summary = generate_findings_summary(combined)

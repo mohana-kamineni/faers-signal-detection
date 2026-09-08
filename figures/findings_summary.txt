@@ -4,40 +4,61 @@ RESEARCH FINDINGS SUMMARY
 
 Research Question:
   How early and how reliably do statistical disproportionality
-  signals (PRR/ROR) emerge in FDA FAERS data for drugs that were
-  later subject to regulatory action - and what are the primary
-  sources of noise and false signals?
+  signals (PRR/ROR) appear in FDA FAERS data for drugs that were
+  later subject to regulatory action -- and what are the primary
+  sources of estimate instability and potential confounding?
 
 Dataset:
   - 24 quarters of FDA FAERS data (2018 Q1 - 2023 Q4)
   - 7,752,616 drug-reaction-quarter observations
   - 5,135 unique drugs, 20,929 unique reactions
+  - Temporal unit: FAERS quarterly data file (not individual event date)
 
 Key Findings:
 
-  1. SIGNAL DETECTION WORKS
-     PRR/ROR consistently identified known safety risks.
-     Evans signals averaged 6.4% of all drug-reaction pairs.
+  1. RETROSPECTIVE SIGNAL CONSISTENCY
+     PRR/ROR signals were retrospectively consistent with known
+     safety events for the selected case-study drugs. Evans
+     signals averaged approximately 6.4% of drug-reaction pairs
+     per quarter.
 
-  2. SIGNALS PRECEDED REGULATORY ACTION
-     For all 5 case studies, statistical signals were detectable
-     in FAERS data BEFORE the FDA took regulatory action:
-       - Pentosan + maculopathy: signal present 28+ months before label warning
-       - Ranitidine + cancer: signal present 25+ months before withdrawal
-       - Valsartan + contamination: signal present 5+ months before recall
-       - Fluoroquinolones + aortic: signal present 10+ months before communication
-       - Metformin + NDMA: signal present 27+ months before investigation
+  2. SIGNALS RETROSPECTIVELY OBSERVABLE BEFORE REGULATORY ACTION
+     For the case-study drugs with well-defined relevant reactions,
+     Evans signals for clinically relevant reactions were present
+     in FAERS quarterly data from early in the observation window.
+     This is a retrospective observation; the analysis does not
+     demonstrate prospective predictive capability.
 
-  3. PRIMARY SOURCES OF NOISE
-     a) Low case counts: 40% of Evans signals
-        have fewer than 5 cases, producing extreme but unreliable PRR values.
-     b) Stimulated reporting: FDA actions cause report surges that
-        inflate post-action PRR (ranitidine reports surged after withdrawal).
-     c) Notoriety bias: widely-prescribed drugs generate many signals
-        simply due to high prescription volume.
+  3. SOURCES OF ESTIMATE INSTABILITY
+     a) Low case counts: 40% of Evans signals are based
+        on 3-4 case reports. While these may reflect genuine safety
+        concerns, their PRR estimates have wide confidence intervals
+        and should be interpreted cautiously.
+     b) Reporting-volume surges: The volume of ranitidine-related
+        reports increased substantially after the FDA withdrawal
+        request, consistent with stimulated reporting. This inflates
+        post-action signal metrics.
+     c) Reporting-volume effects: Drugs with broad adverse effect
+        profiles or high prescription volume generate more Evans
+        signals. Without exposure data, we cannot separate genuine
+        multi-reaction risk from reporting-volume artifacts.
 
-  4. LIMITATIONS
-     - FAERS is a spontaneous reporting system; reports do not prove causation.
-     - Under-reporting is inherent; absence of signal does not mean absence of risk.
-     - Cross-quarter deduplication was not applied (within-quarter only).
-     - Drug name normalization uses prod_ai field; some ambiguity remains.
+  4. NEGATIVE-CONTROL OBSERVATION
+     Widely-prescribed drugs without major regulatory actions
+     (levothyroxine, omeprazole, amlodipine) also produce persistent
+     Evans signals across most quarters. This illustrates that Evans
+     signals alone do not indicate a drug safety problem requiring
+     regulatory action.
+
+  5. LIMITATIONS
+     - FAERS is a spontaneous reporting system; reports do not prove
+       causation and lack a true exposure denominator.
+     - Under-reporting is inherent; absence of signal does not mean
+       absence of risk.
+     - Each quarter's data was processed independently. Cases updated
+       across quarters may appear in multiple quarters' analyses,
+       which could moderately affect temporal signal persistence.
+     - Drug name normalization uses the prod_ai field; some ambiguity
+       remains for the 2% of records requiring drugname fallback.
+     - Case-study drugs were selected retrospectively because their
+       regulatory actions are already known.

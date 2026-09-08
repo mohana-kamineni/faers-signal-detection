@@ -1,12 +1,16 @@
 """
-FAERS Temporal Analysis & Case Study Validation
+FAERS Temporal Analysis & Retrospective Case Study Comparison
 
 Tracks signal strength (PRR/ROR) over time for specific drugs
-and validates against known regulatory actions.
+and compares against known regulatory actions.
 
-This module answers the core research question:
-  "How early and how reliably do disproportionality signals emerge
-  for drugs that were later subject to regulatory action?"
+This module investigates the core research question:
+  "How early and how reliably do disproportionality signals appear
+  in FAERS data for drugs that were later subject to regulatory action?"
+
+Note: This is a retrospective analysis. Case-study drugs were selected
+because their regulatory actions are already known. The analysis does
+not demonstrate prospective predictive capability.
 """
 
 import pandas as pd
@@ -253,10 +257,15 @@ def generate_summary_table(
     """Generate a summary table showing signal emergence for each case study.
 
     For each drug, reports:
-      - First quarter where Evans signal was detected
+      - First quarter where Evans signal was detected for a RELEVANT reaction
       - Regulatory action date
-      - Lead time (quarters between first signal and action)
-      - Peak PRR value
+      - Observation window (quarters between first observed signal and action)
+      - Peak PRR value among relevant reactions
+
+    IMPORTANT: "First signal quarter" is restricted to the clinically relevant
+    reactions defined for each case study, NOT all reactions for the drug.
+    The temporal unit is the FAERS file quarter (which quarter's data file
+    the case appears in), not the individual event date.
     """
     rows = []
 
@@ -271,17 +280,36 @@ def generate_summary_table(
                 "Action": cs["action_desc"],
                 "Action Date": cs["action_date"][:7],
                 "First Signal Quarter": "No data",
-                "Lead Time": "N/A",
+                "Observation Window": "N/A",
                 "Peak PRR": "N/A",
                 "Peak Reaction": "N/A",
             })
             continue
 
-        # Find Evans signals (a >= 3)
+        # Restrict to case-study-specific reactions if defined
+        if cs.get("reactions"):
+            reactions_lower = [r.lower() for r in cs["reactions"]]
+            drug_data = drug_data[
+                drug_data["reaction"].str.lower().isin(reactions_lower)
+            ]
+
+        if drug_data.empty:
+            rows.append({
+                "Drug": cs["name"].split(" - ")[0],
+                "Action": cs["action_desc"],
+                "Action Date": cs["action_date"][:7],
+                "First Signal Quarter": "No relevant reaction data",
+                "Observation Window": "N/A",
+                "Peak PRR": "N/A",
+                "Peak Reaction": "N/A",
+            })
+            continue
+
+        # Find Evans signals (a >= 3) among RELEVANT reactions only
         signals = drug_data[(drug_data["signal_evans"]) & (drug_data["a"] >= 3)]
 
         if signals.empty:
-            first_q = "No Evans signal"
+            first_q = "No Evans signal for relevant reactions"
             lead = "N/A"
         else:
             signals = signals.copy()
@@ -290,9 +318,12 @@ def generate_summary_table(
             first_date = quarter_to_date(first_q)
             action_date = datetime.strptime(cs["action_date"], "%Y-%m-%d")
             lead_months = (action_date - first_date).days / 30.44
-            lead = f"{lead_months:.0f} months" if lead_months > 0 else "After action"
+            if lead_months > 0:
+                lead = f"{lead_months:.0f} months before action"
+            else:
+                lead = f"{abs(lead_months):.0f} months after action"
 
-        # Peak PRR (with a >= 3)
+        # Peak PRR among relevant reactions (with a >= 3)
         peaks = drug_data[drug_data["a"] >= 3]
         if not peaks.empty:
             peak_idx = peaks["PRR"].idxmax()
@@ -307,7 +338,7 @@ def generate_summary_table(
             "Action": cs["action_desc"],
             "Action Date": cs["action_date"][:7],
             "First Signal Quarter": first_q,
-            "Lead Time": lead,
+            "Observation Window": lead,
             "Peak PRR": f"{peak_prr:,.1f}" if isinstance(peak_prr, (int, float)) else peak_prr,
             "Peak Reaction": peak_reaction,
         })
@@ -332,7 +363,7 @@ def run_temporal_analysis(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 60)
-    print("TEMPORAL ANALYSIS & CASE STUDY VALIDATION")
+    print("TEMPORAL ANALYSIS & RETROSPECTIVE CASE STUDY COMPARISON")
     print("=" * 60)
 
     # Load combined data
