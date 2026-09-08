@@ -1,6 +1,6 @@
 # Drug Safety Signal Detection from FDA Adverse Event Data
 
-> **Core Research Question**: How early and how reliably do statistical disproportionality signals (PRR/ROR) appear in FDA FAERS data for drugs that were later subject to regulatory action — and what are the primary sources of estimate instability and potential confounding?
+> **Core Research Question**: How early and how reliably do statistical disproportionality signals (PRR/ROR) appear in FDA FAERS data for drugs that were later subject to regulatory action and what are the primary sources of estimate instability and potential confounding?
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-* **Objective**: Retrospectively investigate whether statistical signal detection methods (Proportional Reporting Ratio and Reporting Odds Ratio) detect safety signals in spontaneous reporting data before official FDA regulatory actions, and quantify sources of reporting noise.
+* **Objective**: Retrospectively investigate whether statistical signal detection methods (Proportional Reporting Ratio and Reporting Odds Ratio) detect safety signals in spontaneous reporting data before official FDA regulatory actions and quantify sources of reporting noise.
 * **Scale**: Processed **24 quarters** (2018 Q1 – 2023 Q4) of raw FDA FAERS data (~400K reports/quarter, **7.75M+ drug-reaction pairs**).
 * **Methods**: Evans criteria disproportionality ($PRR \ge 2$, $\chi^2 \ge 4$, $a \ge 3$) with 95% log-normal confidence intervals; quarterly temporal tracking; negative-control sensitivity; and reporting-volume analysis.
 * **Key Finding**: Signals were retrospectively observable prior to regulatory action dates for well-characterized safety events (e.g., 19 months prior for pentosan-induced maculopathy).
@@ -39,7 +39,7 @@ The 5 case studies are explicitly divided into **primary** (well-defined clinica
 
 ### 1. Primary Case Study: Pentosan Polysulfate (Elmiron) & Maculopathy
 * **Context**: FDA added a warning regarding pigmentary maculopathy and irreversible retinal damage in June 2020.
-* **Finding**: Evans criteria signals for retinal pigmentation and maculopathy were detectable from **2018Q4**, providing an observable retrospective window of **19 months** prior to the label warning, with PRR exceeding $10^4$.
+* **Finding**: Evans criteria signals for retinal pigmentation and maculopathy were detectable from **2018Q4**, providing an observable retrospective window of **19 months** prior to the label warning with PRR exceeding $10^4$.
 
 ![Pentosan Signal Timeline](figures/timeline_pentosan_polysulfate_elmiron.png)
 
@@ -176,7 +176,7 @@ Disproportionality analysis is conducted on $2 \times 2$ contingency tables for 
 
 ## Methodological Limitations
 
-1. **Spontaneous Reporting Constraints**: FAERS reports are submitted voluntarily by clinicians, consumers, and manufacturers. Reports lack medical verification and cannot prove causality.
+1. **Spontaneous Reporting Constraints**: FAERS reports are submitted voluntarily by clinicians, consumers and manufacturers. Reports lack medical verification and cannot prove causality.
 2. **Absence of Exposure Denominator**: FAERS records adverse events, not prescription rates or patient-years. Disproportionality measures relative reporting frequency, not absolute incidence.
 3. **Multiple Comparisons**: Tens of thousands of drug-reaction pairs are evaluated each quarter without family-wise error rate or false discovery rate corrections. Disproportionality operates as a high-sensitivity screening filter, not a definitive statistical test.
 4. **Left-Censoring**: For signals present in the initial observation quarter (2018Q1), the true onset of disproportionality is unknown and predates the dataset.
