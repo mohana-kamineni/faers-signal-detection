@@ -26,10 +26,10 @@ The 5 case studies are explicitly divided into **primary** (well-defined clinica
 | Category | Drug | Adverse Event / Reaction | FDA Regulatory Action | Action Date | First Observable Signal | Observable Window | Peak PRR |
 |---|---|---|---|---|---|---|---|
 | **Primary** | **Pentosan (Elmiron)** | Retinal pigmentation / Maculopathy | Label warning for retinal damage | 2020-06 | 2018Q4 | **19 months before action** | 171,239.6 |
-| **Primary** | **Fluoroquinolones** | Aortic dissection / rupture | Safety communication on aortic risks | 2018-12 | 2018Q1 *(earliest quarter)* | **$\ge$10 months (left-censored)** | 373.6 |
+| **Primary** | **Fluoroquinolones** | Aortic dissection / rupture | Safety communication on aortic risks | 2018-12 | 2018Q1 *(earliest quarter)* | **≥10 months (left-censored)** | 373.6 |
 | **Primary** | **Ranitidine (Zantac)** | Oesophageal / gastric carcinoma | Market withdrawal request | 2020-04 | 2019Q3 | **8 months before action** | 412.5 |
 | *Caveated* | *Valsartan* | Product contamination / quality issue | Voluntary recall (NDMA impurity) | 2018-07 | 2018Q2 | ~2 months before action | 76.1 |
-| *Caveated* | *Metformin* | Lactic acidosis (pre-existing risk) | Investigation of NDMA impurity | 2020-05 | 2018Q1 *(earliest quarter)* | $\ge$27 months (left-censored) | 223.6 |
+| *Caveated* | *Metformin* | Lactic acidosis (pre-existing risk) | Investigation of NDMA impurity | 2020-05 | 2018Q1 *(earliest quarter)* | ≥27 months (left-censored) | 223.6 |
 
 *All observations are retrospective. Case-study drugs were selected because their regulatory actions are already known. This analysis does not demonstrate prospective predictive capability.*
 
