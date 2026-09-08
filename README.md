@@ -47,7 +47,7 @@ The 5 case studies are explicitly divided into **primary** (well-defined clinica
 
 ### 2. Primary Case Study: Fluoroquinolones (Levofloxacin) & Aortic Dissection
 * **Context**: FDA issued a safety communication warning of increased aortic aneurysm and dissection risks in December 2018.
-* **Finding**: Signals for aortic rupture and dissection were present in **2018Q1** (the earliest quarter in our dataset), yielding a lower-bound observable window of **$\ge$10 months**. Because the signal was present in the earliest quarter, true onset is left-censored and predates our observation window.
+* **Finding**: Signals for aortic rupture and dissection were present in **2018Q1** (the earliest quarter in our dataset), yielding a lower-bound observable window of **≥ 10 months**. Because the signal was present in the earliest quarter, true onset is left-censored and predates our observation window.
 
 ![Fluoroquinolones Signal Timeline](figures/timeline_fluoroquinolones.png)
 
